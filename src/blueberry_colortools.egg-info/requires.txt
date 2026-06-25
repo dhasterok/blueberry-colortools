@@ -1,7 +1,0 @@
-PyQt6
-numpy
-matplotlib
-cmcrameri
-Pillow
-scikit-learn
-lame-core
