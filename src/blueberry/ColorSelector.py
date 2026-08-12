@@ -365,16 +365,29 @@ class TernaryHVWidget(QWidget):
             p.drawEllipse(self.pick_pos, 4, 4)
         # draw cursor circle at hover
         if self.hover_pos is not None and self._color_at_point(self.hover_pos) is not None:
-            self.setCursor(Qt.CursorShape.BlankCursor)
             p.setPen(QPen(Qt.GlobalColor.white, 1))
             p.drawEllipse(self.hover_pos, 7, 7)
             p.setPen(QPen(Qt.GlobalColor.black, 1))
             p.drawEllipse(self.hover_pos, 6, 6)
             p.setPen(QPen(Qt.GlobalColor.white, 1))
             p.drawEllipse(self.hover_pos, 5, 5)
-        elif self.hover_pos is not None and self._color_at_point(self.hover_pos) is None:
-            self.setCursor(Qt.CursorShape.ArrowCursor)
         p.end()
+
+    def _update_hover_cursor(self):
+        """Set the widget cursor based on hover state.
+
+        Called from input-event handlers only (never from paintEvent) and
+        only when the target shape actually changes -- setCursor() reenters
+        native cursor-image rendering, which is unsafe to invoke from inside
+        an active QPainter/paintEvent.
+        """
+        if self.hover_pos is not None and self._color_at_point(self.hover_pos) is not None:
+            shape = Qt.CursorShape.BlankCursor
+        else:
+            shape = Qt.CursorShape.ArrowCursor
+        if getattr(self, '_cursor_shape', None) != shape:
+            self._cursor_shape = shape
+            self.setCursor(shape)
 
     def _color_at_point(self, pos):
         """Return RGB tuple (0..1) at given QPoint, or None if outside triangle.
@@ -403,7 +416,15 @@ class TernaryHVWidget(QWidget):
         if c is not None:
             self.hover_rgb = c
             self.hoverColor.emit(c)
+        self._update_hover_cursor()
         self.update()
+
+    def leaveEvent(self, event):
+        """Clear hover state and restore the arrow cursor when the mouse leaves the widget."""
+        self.hover_pos = None
+        self._update_hover_cursor()
+        self.update()
+        super().leaveEvent(event)
 
     def mousePressEvent(self, event):
         """Set selected color and emit signal."""

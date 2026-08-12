@@ -1808,7 +1808,13 @@ class ContinuousColorWidget(QWidget):
                 if handle_rect.contains(event.position()):
                     cursor = Qt.CursorShape.SizeHorCursor
                     break
-            self.setCursor(cursor)
+            # Only touch the native cursor when the shape actually changes --
+            # calling setCursor() on every mouse-move event is unnecessary and
+            # hammers the same native cursor-rendering path implicated in
+            # intermittent macOS crashes elsewhere in this widget family.
+            if getattr(self, '_cursor_shape', None) != cursor:
+                self._cursor_shape = cursor
+                self.setCursor(cursor)
         super().mouseMoveEvent(event)
     
     def mouseReleaseEvent(self, event: QMouseEvent):
